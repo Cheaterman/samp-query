@@ -1,8 +1,43 @@
 from __future__ import annotations
+import struct
 import random
 from dataclasses import dataclass
 
 import trio
+
+
+@dataclass
+class ServerInfo:
+    name: str
+    password: bool
+    players: int
+    max_players: int
+    gamemode: str
+    language: str
+
+    @classmethod
+    def from_data(cls, data: bytes) -> ServerInfo:
+        password, players, max_players, data = (
+            *struct.unpack_from('<?HH', data),
+            data[5:],
+        )
+        strings = {}
+
+        for string in ('name', 'gamemode', 'language'):
+            str_len, data = *struct.unpack_from('<I', data), data[4:]
+            strings[string], data = data[:str_len], data[str_len:]
+
+        assert not data  # We consumed all the buffer
+
+        encoding = 'cp1252'
+        return cls(
+            name=strings['name'].decode(encoding),
+            password=password,
+            players=players,
+            max_players=max_players,
+            gamemode=strings['gamemode'].decode(encoding),
+            language=strings['language'].decode(encoding),
+        )
 
 
 @dataclass
@@ -50,7 +85,7 @@ class Client:
             if data == expected_response:
                 return trio.current_time() - start_time
 
-    async def info(self) -> bytes:
+    async def info(self) -> ServerInfo:
         await self.send_opcode(b'i')
         assert self._socket and self._prefix
         expected_header = self._prefix + b'i'
@@ -59,4 +94,4 @@ class Client:
             data = await self._socket.recv(4096)
 
             if data.startswith(expected_header):
-                return data
+                return ServerInfo.from_data(data[len(expected_header):])
