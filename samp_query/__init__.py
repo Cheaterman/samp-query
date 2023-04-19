@@ -3,7 +3,15 @@ import struct
 import random
 from dataclasses import dataclass
 
+import cchardet as chardet  # type: ignore
 import trio
+
+
+def unpack_string(data: bytes) -> tuple[str, bytes]:
+    str_len, data = *struct.unpack_from('<I', data), data[4:]
+    string, data = data[:str_len], data[str_len:]
+    encoding: str = chardet.detect(string)['encoding']
+    return string.decode(encoding), data
 
 
 @dataclass
@@ -17,26 +25,21 @@ class ServerInfo:
 
     @classmethod
     def from_data(cls, data: bytes) -> ServerInfo:
-        password, players, max_players, data = (
-            *struct.unpack_from('<?HH', data),
-            data[5:],
-        )
-        strings = {}
-
-        for string in ('name', 'gamemode', 'language'):
-            str_len, data = *struct.unpack_from('<I', data), data[4:]
-            strings[string], data = data[:str_len], data[str_len:]
+        password, players, max_players = struct.unpack_from('<?HH', data)
+        data = data[5:]  # _Bool + short + short, see above
+        name, data = unpack_string(data)
+        gamemode, data = unpack_string(data)
+        language, data = unpack_string(data)
 
         assert not data  # We consumed all the buffer
 
-        encoding = 'cp1252'
         return cls(
-            name=strings['name'].decode(encoding),
+            name=name,
             password=password,
             players=players,
             max_players=max_players,
-            gamemode=strings['gamemode'].decode(encoding),
-            language=strings['language'].decode(encoding),
+            gamemode=gamemode,
+            language=language,
         )
 
 
