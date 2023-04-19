@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Will probably fail on 3.8, the point is to test that
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        # Will probably fail on <=3.8, the point is to test that
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v3
