@@ -68,33 +68,33 @@ class Client:
             + self.port.to_bytes(2, 'little')
         )
 
-    async def send_opcode(self, opcode: bytes, payload: bytes = b'') -> None:
+    async def send(self, opcode: bytes, payload: bytes = b'') -> None:
         if not self._socket:
             await self.connect()
 
         assert self._socket and self._prefix
         await self._socket.send(self._prefix + opcode + payload)
 
+    async def receive(self, header: bytes = b'') -> bytes:
+        assert self._socket
+
+        while True:
+            data = await self._socket.recv(4096)
+
+            if data.startswith(header):
+                return data[len(header):]
+
     async def ping(self) -> float:
         payload = random.getrandbits(32).to_bytes(4, 'little')
         start_time = trio.current_time()
-        await self.send_opcode(b'p', payload)
-        assert self._socket and self._prefix
-        expected_response = self._prefix + b'p' + payload
-
-        while True:
-            data = await self._socket.recv(4096)
-
-            if data == expected_response:
-                return trio.current_time() - start_time
+        await self.send(b'p', payload)
+        assert self._prefix
+        data = await self.receive(header=self._prefix + b'p' + payload)
+        assert not data  # No data beyond expected header
+        return trio.current_time() - start_time
 
     async def info(self) -> ServerInfo:
-        await self.send_opcode(b'i')
-        assert self._socket and self._prefix
-        expected_header = self._prefix + b'i'
-
-        while True:
-            data = await self._socket.recv(4096)
-
-            if data.startswith(expected_header):
-                return ServerInfo.from_data(data[len(expected_header):])
+        await self.send(b'i')
+        assert self._prefix
+        data = await self.receive(header=self._prefix + b'i')
+        return ServerInfo.from_data(data)
