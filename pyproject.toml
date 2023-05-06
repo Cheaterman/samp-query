@@ -1,0 +1,26 @@
+[project]
+name = "samp_query"
+version = "0.0.1"
+authors = [
+  { name="The Cheaterman", email="the.cheaterman@gmail.com" },
+]
+description = "A SAMP query/RCON client for Python using trio."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "trio",
+  "cchardet",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Cheaterman/samp-query"
+"Bug Tracker" = "https://github.com/Cheaterman/samp-query/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
