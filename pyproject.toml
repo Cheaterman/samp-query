@@ -14,7 +14,7 @@ classifiers = [
 ]
 dependencies = [
   "trio",
-  "cchardet",
+  "faust-cchardet",
 ]
 
 [project.urls]
