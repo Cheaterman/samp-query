@@ -1,7 +1,7 @@
 from __future__ import annotations
 import struct
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import cchardet as chardet  # type: ignore
 import trio
@@ -47,10 +47,10 @@ class ServerInfo:
 class Client:
     ip: str
     port: int
-    rcon_password: str | None = None
+    rcon_password: str | None = field(default=None, repr=False)
 
-    _socket: trio.socket.SocketType | None = None
-    _prefix: bytes | None = None
+    _socket: trio.socket.SocketType | None = field(default=None, repr=False)
+    _prefix: bytes | None = field(default=None, repr=False)
 
     async def connect(self) -> None:
         family, type, proto, _, (ip, *_) = (await trio.socket.getaddrinfo(
