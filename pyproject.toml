@@ -24,3 +24,37 @@ dependencies = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.flake8]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    "__pycache__",
+    "env",
+    "build",
+    "dist",
+]
+
+[tool.mypy]
+strict = true
+files = ["."]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    "__pycache__",
+    "env",
+    "build",
+    "dist",
+]
+
+[tool.pytest.ini_options]
+norecursedirs = [
+    ".git",
+    ".mypy_cache",
+    "__pycache__",
+    "env",
+    "build",
+    "dist",
+]
+addopts = "-Werror --cov=samp_query --cov-report=term-missing --cov-fail-under=100"
+trio_mode = true

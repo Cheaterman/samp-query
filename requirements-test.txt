@@ -1,3 +1,8 @@
 flake8
+# See https://github.com/PyCQA/flake8/issues/234
+flake8-pyproject
 mypy
 trio-typing
+pytest
+pytest-cov
+pytest-trio
