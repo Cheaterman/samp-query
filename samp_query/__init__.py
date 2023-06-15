@@ -7,8 +7,10 @@ import cchardet as chardet  # type: ignore
 import trio
 
 
-def unpack_string(data: bytes) -> tuple[str, bytes]:
-    str_len, data = *struct.unpack_from('<I', data), data[4:]
+def unpack_string(data: bytes, len_type: str = 'I') -> tuple[str, bytes]:
+    format = f'<{len_type}'
+    size = struct.calcsize(format)
+    str_len, data = *struct.unpack_from(format, data), data[size:]
     string, data = data[:str_len], data[str_len:]
     encoding: str = chardet.detect(string)['encoding']
     return string.decode(encoding), data
@@ -41,6 +43,42 @@ class ServerInfo:
             gamemode=gamemode,
             language=language,
         )
+
+
+@dataclass
+class PlayerInfo:
+    name: str
+    score: int
+
+    @classmethod
+    def from_data(cls, data: bytes) -> tuple[PlayerInfo, bytes]:
+        name, data = unpack_string(data, 'B')
+        score = struct.unpack_from('<i', data)[0]
+        data = data[4:]  # int, see above
+
+        return cls(
+            name=name,
+            score=score,
+        ), data
+
+
+@dataclass
+class PlayerList:
+    players: list[PlayerInfo]
+
+    @classmethod
+    def from_data(cls, data: bytes) -> PlayerList:
+        player_count = struct.unpack_from('<H', data)[0]
+        data = data[2:]  # short, see above
+        players = []
+
+        for _ in range(player_count):
+            player, data = PlayerInfo.from_data(data)
+            players.append(player)
+
+        assert not data  # We consumed all the buffer
+
+        return cls(players=players)
 
 
 @dataclass
@@ -98,3 +136,9 @@ class Client:
         assert self._prefix
         data = await self.receive(header=self._prefix + b'i')
         return ServerInfo.from_data(data)
+
+    async def players(self) -> PlayerList:
+        await self.send(b'c')
+        assert self._prefix
+        data = await self.receive(header=self._prefix + b'c')
+        return PlayerList.from_data(data)

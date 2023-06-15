@@ -13,6 +13,7 @@ async def main(*args: str) -> str | None:
     client = Client(ip, int(port))
     print(await client.ping())
     print(await client.info())
+    print(await client.players())
     return None
 
 
