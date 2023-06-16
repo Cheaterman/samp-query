@@ -7,7 +7,7 @@ import cchardet as chardet  # type: ignore
 import trio
 
 
-def unpack_string(data: bytes, len_type: str = 'I') -> tuple[str, bytes]:
+def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes]:
     format = f'<{len_type}'
     size = struct.calcsize(format)
     str_len, data = *struct.unpack_from(format, data), data[size:]
@@ -29,9 +29,9 @@ class ServerInfo:
     def from_data(cls, data: bytes) -> ServerInfo:
         password, players, max_players = struct.unpack_from('<?HH', data)
         data = data[5:]  # _Bool + short + short, see above
-        name, data = unpack_string(data)
-        gamemode, data = unpack_string(data)
-        language, data = unpack_string(data)
+        name, data = unpack_string(data, 'I')
+        gamemode, data = unpack_string(data, 'I')
+        language, data = unpack_string(data, 'I')
 
         assert not data  # We consumed all the buffer
 
@@ -82,13 +82,48 @@ class PlayerList:
 
 
 @dataclass
+class Rule:
+    name: str
+    value: str
+
+    @classmethod
+    def from_data(cls, data: bytes) -> tuple[Rule, bytes]:
+        name, data = unpack_string(data, 'B')
+        value, data = unpack_string(data, 'B')
+
+        return cls(
+            name=name,
+            value=value,
+        ), data
+
+
+@dataclass
+class RuleList:
+    rules: list[Rule]
+
+    @classmethod
+    def from_data(cls, data: bytes) -> RuleList:
+        rule_count = struct.unpack_from('<H', data)[0]
+        data = data[2:]  # short, see above
+        rules = []
+
+        for _ in range(rule_count):
+            rule, data = Rule.from_data(data)
+            rules.append(rule)
+
+        assert not data  # We consumed all the buffer
+
+        return cls(rules=rules)
+
+
+@dataclass
 class Client:
     ip: str
     port: int
     rcon_password: str | None = field(default=None, repr=False)
 
+    prefix: bytes | None = field(default=None, repr=False)
     _socket: trio.socket.SocketType | None = field(default=None, repr=False)
-    _prefix: bytes | None = field(default=None, repr=False)
 
     async def connect(self) -> None:
         family, type, proto, _, (ip, *_) = (await trio.socket.getaddrinfo(
@@ -100,7 +135,7 @@ class Client:
         self.ip = ip
         self._socket = socket = trio.socket.socket(family, type, proto)
         await socket.connect((self.ip, self.port))
-        self._prefix = (
+        self.prefix = (
             b'SAMP'
             + trio.socket.inet_aton(self.ip)
             + self.port.to_bytes(2, 'little')
@@ -110,8 +145,8 @@ class Client:
         if not self._socket:
             await self.connect()
 
-        assert self._socket and self._prefix
-        await self._socket.send(self._prefix + opcode + payload)
+        assert self._socket and self.prefix
+        await self._socket.send(self.prefix + opcode + payload)
 
     async def receive(self, header: bytes = b'') -> bytes:
         assert self._socket
@@ -126,8 +161,8 @@ class Client:
         payload = random.getrandbits(32).to_bytes(4, 'little')
         start_time = trio.current_time()
         await self.send(b'p', payload)
-        assert self._prefix
-        data = await self.receive(header=self._prefix + b'p' + payload)
+        assert self.prefix
+        data = await self.receive(header=self.prefix + b'p' + payload)
         assert not data  # No data beyond expected header
         return trio.current_time() - start_time
 
@@ -138,20 +173,26 @@ class Client:
         # Assuming latency variance is less than 100%
         with trio.move_on_after(2 * ping):
             await self.send(b'o', payload)
-            assert self._prefix
-            await self.receive(header=self._prefix + b'o' + payload)
+            assert self.prefix
+            await self.receive(header=self.prefix + b'o' + payload)
             return True
 
         return False
 
     async def info(self) -> ServerInfo:
         await self.send(b'i')
-        assert self._prefix
-        data = await self.receive(header=self._prefix + b'i')
+        assert self.prefix
+        data = await self.receive(header=self.prefix + b'i')
         return ServerInfo.from_data(data)
 
     async def players(self) -> PlayerList:
         await self.send(b'c')
-        assert self._prefix
-        data = await self.receive(header=self._prefix + b'c')
+        assert self.prefix
+        data = await self.receive(header=self.prefix + b'c')
         return PlayerList.from_data(data)
+
+    async def rules(self) -> RuleList:
+        await self.send(b'r')
+        assert self.prefix
+        data = await self.receive(header=self.prefix + b'r')
+        return RuleList.from_data(data)

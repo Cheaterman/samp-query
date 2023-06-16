@@ -22,6 +22,7 @@ async def main(*args: str) -> str | None:
         print('More than 100 players online, no info returned')
 
     print('Uses open.mp:', await client.is_omp())
+    print(await client.rules())
     return None
 
 
