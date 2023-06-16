@@ -30,7 +30,7 @@ def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes]:
     size = struct.calcsize(format)
     str_len, data = *struct.unpack_from(format, data), data[size:]
     string, data = data[:str_len], data[str_len:]
-    encoding: str = chardet.detect(string)['encoding']
+    encoding = chardet.detect(string)['encoding'] or 'ascii'
     return string.decode(encoding), data
 
 
@@ -246,11 +246,9 @@ class Client:
                 start_time = trio.current_time()
                 data = await self.receive(header=self.prefix + b'x')
                 receive_duration = trio.current_time() - start_time
-                line_len = struct.unpack_from('<H', data)[0]
-                data = data[2:]  # short, see above
-                assert len(data) == line_len
-                encoding: str = chardet.detect(data)['encoding']
-                response += data.decode(encoding) + '\n'
+                line, data = unpack_string(data, 'H')
+                assert not data
+                response += line + '\n'
                 cancel_scope.deadline += receive_duration
 
         if not response:
