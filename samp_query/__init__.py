@@ -17,7 +17,13 @@ def encode_codepage(string: str) -> bytes:
         except UnicodeEncodeError:
             continue
 
-    raise ValueError(f'Unable to encode string "{string}"')
+    raise UnicodeEncodeError(
+        'cp1250-1258',
+        string,
+        0,
+        len(string),
+        'Unable to find a suitable codepage',
+    )
 
 
 def pack_string(string: str, len_type: str) -> bytes:
