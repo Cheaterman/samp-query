@@ -174,7 +174,8 @@ class Client:
         with trio.move_on_after(2 * ping):
             await self.send(b'o', payload)
             assert self.prefix
-            await self.receive(header=self.prefix + b'o' + payload)
+            data = await self.receive(header=self.prefix + b'o' + payload)
+            assert not data  # No data beyond expected header
             return True
 
         return False
