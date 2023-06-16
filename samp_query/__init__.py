@@ -6,6 +6,24 @@ from dataclasses import dataclass, field
 import cchardet as chardet  # type: ignore
 import trio
 
+# Assuming latency variance is less than 100%
+MAX_LATENCY_VARIANCE = 2
+
+
+def encode_codepage(string: str) -> bytes:
+    for codepage in range(1250, 1259):
+        try:
+            return string.encode(f'cp{codepage}')
+        except UnicodeEncodeError:
+            continue
+
+    raise ValueError(f'Unable to encode string "{string}"')
+
+
+def pack_string(string: str, len_type: str) -> bytes:
+    format = f'<{len_type}'
+    return struct.pack(format, len(string)) + encode_codepage(string)
+
 
 def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes]:
     format = f'<{len_type}'
@@ -14,6 +32,18 @@ def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes]:
     string, data = data[:str_len], data[str_len:]
     encoding: str = chardet.detect(string)['encoding']
     return string.decode(encoding), data
+
+
+class MissingRCONPassword(Exception):
+    pass
+
+
+class InvalidRCONPassword(Exception):
+    pass
+
+
+class RCONDisabled(Exception):
+    pass
 
 
 @dataclass
@@ -170,8 +200,7 @@ class Client:
         ping = await self.ping()
         payload = random.getrandbits(32).to_bytes(4, 'little')
 
-        # Assuming latency variance is less than 100%
-        with trio.move_on_after(2 * ping):
+        with trio.move_on_after(MAX_LATENCY_VARIANCE * ping):
             await self.send(b'o', payload)
             assert self.prefix
             data = await self.receive(header=self.prefix + b'o' + payload)
@@ -197,3 +226,37 @@ class Client:
         assert self.prefix
         data = await self.receive(header=self.prefix + b'r')
         return RuleList.from_data(data)
+
+    async def rcon(self, command: str) -> str:
+        if not self.rcon_password:
+            raise MissingRCONPassword()
+
+        ping = await self.ping()
+        payload = (
+            pack_string(self.rcon_password, 'H')
+            + pack_string(command, 'H')
+        )
+        await self.send(b'x', payload)
+        assert self.prefix
+
+        response = ''
+
+        with trio.move_on_after(MAX_LATENCY_VARIANCE * ping) as cancel_scope:
+            while True:
+                start_time = trio.current_time()
+                data = await self.receive(header=self.prefix + b'x')
+                receive_duration = trio.current_time() - start_time
+                line_len = struct.unpack_from('<H', data)[0]
+                data = data[2:]  # short, see above
+                assert len(data) == line_len
+                encoding: str = chardet.detect(data)['encoding']
+                response += data.decode(encoding) + '\n'
+                cancel_scope.deadline += receive_duration
+
+        if not response:
+            raise RCONDisabled()
+
+        if response == 'Invalid RCON password.\n':
+            raise InvalidRCONPassword()
+
+        return response[:-1]  # Strip trailing newline
