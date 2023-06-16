@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 import cchardet as chardet  # type: ignore
 import trio
 
-# Assuming latency variance is less than 100%
-MAX_LATENCY_VARIANCE = 2
+# Assuming ratio between max and min ping can't be higher than this
+MAX_LATENCY_VARIANCE = 5
 
 
 def encode_codepage(string: str) -> bytes:
