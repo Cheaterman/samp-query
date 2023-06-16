@@ -11,9 +11,17 @@ async def main(*args: str) -> str | None:
 
     ip, port = args[1:]
     client = Client(ip, int(port))
-    print(await client.ping())
+    ping = await client.ping()
+    print(ping)
     print(await client.info())
-    print(await client.players())
+
+    with trio.move_on_after(2 * ping) as cancel_scope:
+        print(await client.players())
+
+    if cancel_scope.cancelled_caught:
+        print('More than 100 players online, no info returned')
+
+    print('Uses open.mp:', await client.is_omp())
     return None
 
 

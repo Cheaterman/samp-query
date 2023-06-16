@@ -131,6 +131,19 @@ class Client:
         assert not data  # No data beyond expected header
         return trio.current_time() - start_time
 
+    async def is_omp(self) -> bool:
+        ping = await self.ping()
+        payload = random.getrandbits(32).to_bytes(4, 'little')
+
+        # Assuming latency variance is less than 100%
+        with trio.move_on_after(2 * ping):
+            await self.send(b'o', payload)
+            assert self._prefix
+            await self.receive(header=self._prefix + b'o' + payload)
+            return True
+
+        return False
+
     async def info(self) -> ServerInfo:
         await self.send(b'i')
         assert self._prefix
