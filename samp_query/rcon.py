@@ -126,7 +126,10 @@ async def main(*args: str) -> str | None:
 
 
 def run() -> str | None:
-    return trio.run(main, *sys.argv)
+    try:
+        return trio.run(main, *sys.argv)
+    except KeyboardInterrupt:
+        return None
 
 
 if __name__ == '__main__':
