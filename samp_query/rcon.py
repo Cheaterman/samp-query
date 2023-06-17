@@ -1,3 +1,4 @@
+import os
 import sys
 
 import trio
@@ -44,7 +45,8 @@ async def main(*args: str) -> str | None:
     print('=' * len(header), end='\n\n')
 
     if len(args) != 4:
-        return f'Usage: {args[0]} host port rcon_password'
+        samp_rcon = os.path.basename(args[0])
+        return f'Usage: {samp_rcon} host port rcon_password'
 
     host, port, rcon_password = args[1:]
     client = Client(host, int(port), rcon_password)
