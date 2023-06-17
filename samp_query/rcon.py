@@ -34,7 +34,7 @@ def prompt(text: str, default: bool = False) -> bool:
 
         if response not in valid_choices:
             print(
-                f'Invalid response {response}. Valid choices are:',
+                f'Invalid response: {response!r}. Valid choices are:',
                 ', '.join(repr(choice) for choice in valid_choices)
             )
             continue
