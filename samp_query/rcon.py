@@ -90,7 +90,7 @@ async def main(*args: str) -> str | None:
     while True:
         try:
             command = input(f'rcon@{host}:{port} # ')
-        except EOFError:
+        except (EOFError, KeyboardInterrupt):
             print()
             break
 
@@ -101,9 +101,15 @@ async def main(*args: str) -> str | None:
             break
 
         if command == 'exit':
-            if not prompt(
-                'Are you sure you want to shut your server down?'
-            ):
+            try:
+                really_exit = prompt(
+                    'Are you sure you want to shut your server down?'
+                )
+            except KeyboardInterrupt:
+                print()
+                break
+
+            if not really_exit:
                 continue
 
             try:
@@ -129,10 +135,7 @@ async def main(*args: str) -> str | None:
 
 
 def run() -> str | None:
-    try:
-        return trio.run(main, *sys.argv)
-    except KeyboardInterrupt:
-        return None
+    return trio.run(main, *sys.argv)
 
 
 if __name__ == '__main__':
