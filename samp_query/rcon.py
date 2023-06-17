@@ -9,6 +9,9 @@ from samp_query import (
     RCONDisabled,
 )
 
+if sys.platform not in ('win32', 'cygwin', 'msys'):
+    import readline  # noqa: F401
+
 TIMEOUT = 5
 
 
