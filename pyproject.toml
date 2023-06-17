@@ -17,6 +17,9 @@ dependencies = [
   "faust-cchardet",
 ]
 
+[project.scripts]
+samp-rcon = "samp_query.rcon:run"
+
 [project.urls]
 "Homepage" = "https://github.com/Cheaterman/samp-query"
 "Bug Tracker" = "https://github.com/Cheaterman/samp-query/issues"
