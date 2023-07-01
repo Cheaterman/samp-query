@@ -12,7 +12,7 @@ import sys
 from sphinx_pyproject import SphinxConfig
 
 config = SphinxConfig('../../pyproject.toml', globalns=globals())
-sys.path.insert(0, pathlib.Path('../../samp_query').resolve())
+sys.path.insert(0, str(pathlib.Path('../..').resolve()))
 current_year = datetime.date.today().year
 
 project, release = name, version  # noqa: F821
