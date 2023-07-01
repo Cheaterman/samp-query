@@ -15,8 +15,8 @@ config = SphinxConfig('../../pyproject.toml', globalns=globals())
 sys.path.insert(0, pathlib.Path('../../samp_query').resolve())
 current_year = datetime.date.today().year
 
-project, release = name, version
-copyright = f'{current_year}, {author}'
+project, release = name, version  # noqa: F821
+copyright = f'{current_year}, {author}'  # noqa: F821
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

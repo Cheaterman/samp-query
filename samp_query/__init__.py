@@ -251,7 +251,8 @@ class Client:
 
     :param str ip: The IP address of the server.
     :param int port: The port number of the server.
-    :param str | None rcon_password: The RCON password for the server (optional).
+    :param str | None rcon_password:
+        The RCON password for the server (optional).
     """
     ip: str
     port: int
