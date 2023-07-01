@@ -1,6 +1,8 @@
 samp_query
 ==========
 
+[![CI](https://github.com/Cheaterman/samp-query/actions/workflows/ci.yml/badge.svg)](https://github.com/Cheaterman/samp-query/actions/workflows/ci.yml)
+
 samp-query is a Python library for interacting with SA-MP/open.mp servers using the query protocol.
 It provides functionality to query server information, retrieve player list, show rules, and execute remote console (RCON) commands.
 
