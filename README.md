@@ -67,3 +67,8 @@ trio.run(main)
 ```
 
 Make sure to replace `'127.0.0.1'` and `7777` with the actual IP address and port of the game server you want to connect to. If the server has RCON enabled, provide a password in the `rcon_password` attribute of the `samp_query.Client` instance (otherwise keep it None).
+
+Documentation
+-------------
+
+For more information, you can [read the documentation](https://cheaterman.github.io/samp-query/).
