@@ -22,7 +22,8 @@ samp-rcon = "samp_query.rcon:run"
 
 [project.urls]
 "Homepage" = "https://github.com/Cheaterman/samp-query"
-"Bug Tracker" = "https://github.com/Cheaterman/samp-query/issues"
+"Documentation" = "https://cheaterman.github.io/samp-query/"
+"Issue tracker" = "https://github.com/Cheaterman/samp-query/issues"
 
 [build-system]
 requires = ["hatchling"]
