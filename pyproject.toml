@@ -28,6 +28,12 @@ samp-rcon = "samp_query.rcon:run"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+include = [
+    "samp_query/**.py",
+    "samp_query/py.typed",
+]
+
 [tool.flake8]
 exclude = [
     ".git",
