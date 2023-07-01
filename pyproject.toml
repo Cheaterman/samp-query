@@ -48,6 +48,7 @@ exclude = [
     "env",
     "build",
     "dist",
+    "docs",
 ]
 
 [tool.pytest.ini_options]
