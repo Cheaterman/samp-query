@@ -15,7 +15,6 @@ Here's a basic example of how to use the library:
             port=7777,
             rcon_password=None,  # Your rcon password as string
         )
-        await client.connect()
 
         info = await client.info()
         print(f'Server Name: {info.name}')
