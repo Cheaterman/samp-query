@@ -40,7 +40,6 @@ async def main():
         port=7777,
         rcon_password=None,  # Your rcon password as string
     )
-    await client.connect()
 
     info = await client.info()
     print(f'Server Name: {info.name}')
