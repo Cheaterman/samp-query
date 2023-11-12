@@ -1,6 +1,7 @@
 from __future__ import annotations
 import struct
 import random
+import typing
 from dataclasses import dataclass, field
 
 import cchardet as chardet  # type: ignore
@@ -47,13 +48,14 @@ def pack_string(string: str, len_type: str) -> bytes:
     return struct.pack(format, len(string)) + encode_codepage(string)
 
 
-def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes]:
+def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes, str]:
     """
     Unpack a string from bytes with a length prefix.
 
     :param bytes data: The data to unpack.
     :param str len_type: The format specifier for the length prefix.
-    :return: The unpacked string and the remaining data.
+    :return: The unpacked string, the remaining data, and the detected
+             encoding.
     :rtype: tuple[str, bytes]
     """
     format = f'<{len_type}'
@@ -61,7 +63,7 @@ def unpack_string(data: bytes, len_type: str) -> tuple[str, bytes]:
     str_len, data = *struct.unpack_from(format, data), data[size:]
     string, data = data[:str_len], data[str_len:]
     encoding = chardet.detect(string)['encoding'] or 'ascii'
-    return string.decode(encoding), data
+    return string.decode(encoding), data, encoding
 
 
 class MissingRCONPassword(Exception):
@@ -74,6 +76,13 @@ class InvalidRCONPassword(Exception):
 
 class RCONDisabled(Exception):
     """Raised when RCON is disabled on the server or did not respond."""
+
+
+class Encodings(typing.TypedDict):
+    """Encoding detection sources: name, gamemode, and language."""
+    name: str
+    gamemode: str
+    language: str
 
 
 @dataclass
@@ -95,6 +104,7 @@ class ServerInfo:
     max_players: int
     gamemode: str
     language: str
+    encodings: Encodings
 
     @classmethod
     def from_data(cls, data: bytes) -> ServerInfo:
@@ -107,9 +117,9 @@ class ServerInfo:
         """
         password, players, max_players = struct.unpack_from('<?HH', data)
         data = data[5:]  # _Bool + short + short, see above
-        name, data = unpack_string(data, 'I')
-        gamemode, data = unpack_string(data, 'I')
-        language, data = unpack_string(data, 'I')
+        name, data, name_encoding = unpack_string(data, 'I')
+        gamemode, data, gamemode_encoding = unpack_string(data, 'I')
+        language, data, language_encoding = unpack_string(data, 'I')
 
         assert not data  # We consumed all the buffer
 
@@ -120,6 +130,11 @@ class ServerInfo:
             max_players=max_players,
             gamemode=gamemode,
             language=language,
+            encodings=dict(
+                name=name_encoding,
+                gamemode=gamemode_encoding,
+                language=language_encoding,
+            ),
         )
 
 
@@ -143,7 +158,8 @@ class PlayerInfo:
         :return: The created PlayerInfo object and the remaining data.
         :rtype: tuple[PlayerInfo, bytes]
         """
-        name, data = unpack_string(data, 'B')
+        # Player name can't really be anything else than ASCII
+        name, data, _ = unpack_string(data, 'B')
         score = struct.unpack_from('<i', data)[0]
         data = data[4:]  # int, see above
 
@@ -194,6 +210,7 @@ class Rule:
     """
     name: str
     value: str
+    encoding: str
 
     @classmethod
     def from_data(cls, data: bytes) -> tuple[Rule, bytes]:
@@ -204,12 +221,13 @@ class Rule:
         :return: The created Rule object and the remaining data.
         :rtype: tuple[Rule, bytes]
         """
-        name, data = unpack_string(data, 'B')
-        value, data = unpack_string(data, 'B')
+        name, data, _ = unpack_string(data, 'B')
+        value, data, encoding = unpack_string(data, 'B')
 
         return cls(
             name=name,
             value=value,
+            encoding=encoding,
         ), data
 
 
@@ -407,7 +425,7 @@ class Client:
                 start_time = trio.current_time()
                 data = await self.receive(header=self.prefix + b'x')
                 receive_duration = trio.current_time() - start_time
-                line, data = unpack_string(data, 'H')
+                line, data, _ = unpack_string(data, 'H')
                 assert not data
                 response += line + '\n'
                 cancel_scope.deadline += receive_duration
